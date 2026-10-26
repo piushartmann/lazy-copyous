@@ -12,6 +12,8 @@ export const Settings = {
 	ClipboardHistory: 'clipboard-history',
 	HistoryLength: 'history-length',
 	HistoryTime: 'history-time',
+	InitialItemBatchSize: 'initial-item-batch-size',
+	LazyItemBatchSize: 'lazy-item-batch-size',
 
 	RememberSearch: 'remember-search',
 	ExcludePinned: 'exclude-pinned',
@@ -38,6 +40,7 @@ export const Settings = {
 	ClipboardPositionVertical: 'clipboard-position-vertical',
 	ClipboardPositionHorizontal: 'clipboard-position-horizontal',
 	ClipboardSize: 'clipboard-size',
+	AnimationTime: 'animation-time',
 
 	ClipboardMarginTop: 'clipboard-margin-top',
 	ClipboardMarginRight: 'clipboard-margin-right',
@@ -144,6 +147,8 @@ export const SettingsTypes = {
 	[Settings.ClipboardHistory]: 'enum',
 	[Settings.HistoryLength]: 'int',
 	[Settings.HistoryTime]: 'int',
+	[Settings.InitialItemBatchSize]: 'int',
+	[Settings.LazyItemBatchSize]: 'int',
 
 	[Settings.RememberSearch]: 'boolean',
 	[Settings.ExcludePinned]: 'boolean',
@@ -170,6 +175,7 @@ export const SettingsTypes = {
 	[Settings.ClipboardPositionVertical]: 'enum',
 	[Settings.ClipboardPositionHorizontal]: 'enum',
 	[Settings.ClipboardSize]: 'int',
+	[Settings.AnimationTime]: 'int',
 
 	[Settings.ClipboardMarginTop]: 'int',
 	[Settings.ClipboardMarginRight]: 'int',

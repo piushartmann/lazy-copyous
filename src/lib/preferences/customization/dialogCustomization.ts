@@ -83,6 +83,13 @@ export class DialogCustomization extends Adw.PreferencesGroup {
 		});
 		this.add(margins);
 
+		const animationTime = new Adw.SpinRow({
+			title: _('Animation Time'),
+			subtitle: _('Duration of the clipboard dialog animation in milliseconds'),
+			adjustment: new Gtk.Adjustment({ lower: 0, upper: 1000, step_increment: 1, value: 40 }),
+		});
+		this.add(animationTime);
+
 		const topMargin = new Adw.SpinRow({
 			title: _('Top'),
 			subtitle: _('Distance from the top of the screen'),
@@ -137,6 +144,7 @@ export class DialogCustomization extends Adw.PreferencesGroup {
 		settings.bind('clipboard-margin-left', leftMargin, 'value', Gio.SettingsBindFlags.DEFAULT);
 		settings.bind('auto-hide-search', autoHideSearch, 'active', Gio.SettingsBindFlags.DEFAULT);
 		settings.bind('show-scrollbar', showScrollbar, 'active', Gio.SettingsBindFlags.DEFAULT);
+		settings.bind('animation-time', animationTime, 'value', Gio.SettingsBindFlags.DEFAULT);
 
 		makeResettable(
 			position,
@@ -156,6 +164,7 @@ export class DialogCustomization extends Adw.PreferencesGroup {
 			'clipboard-margin-bottom',
 			'clipboard-margin-left',
 		);
+		makeResettable(animationTime, settings, 'animation-time');
 		makeResettable(topMargin, settings, 'clipboard-margin-top');
 		makeResettable(rightMargin, settings, 'clipboard-margin-right');
 		makeResettable(bottomMargin, settings, 'clipboard-margin-bottom');

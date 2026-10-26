@@ -36,10 +36,6 @@ import { TextItem } from './items/textItem.js';
 import { CenterBox, CollapsibleHeaderLayout, FitConstraint } from './layout.js';
 import { SearchChange, SearchEntry, SearchQuery } from './searchEntry.js';
 
-const ANIMATION_TIME = 150;
-const INITIAL_ITEM_BATCH_SIZE = 12;
-const LAZY_ITEM_BATCH_SIZE = 16;
-
 @registerClass()
 class IncognitoButton extends St.Button {
 	private readonly _incognitoIcon: Gio.Icon;
@@ -486,7 +482,7 @@ export class ClipboardDialog extends St.Widget {
 			translationY: 0,
 			scaleX: 1,
 			scaleY: 1,
-			duration: ANIMATION_TIME,
+			duration: this.ext.settings.get_int('animation-time'),
 			mode,
 			onComplete: () => this.scheduleLazyLoad(),
 		});
@@ -496,7 +492,8 @@ export class ClipboardDialog extends St.Widget {
 		if (!this.opened) return;
 
 		this.stopLazyLoad();
-		const unloaded = this._scrollView.unloadItemsAfter(INITIAL_ITEM_BATCH_SIZE);
+		const initialBatchSize = this.ext.settings.get_int('initial-item-batch-size');
+		const unloaded = this._scrollView.unloadItemsAfter(initialBatchSize);
 		this._pendingEntries = [...unloaded.map((item) => item.entry), ...this._pendingEntries];
 		this._scrollView.setPendingItemCount(this._pendingEntries.length);
 		this._closing = true;
@@ -536,7 +533,7 @@ export class ClipboardDialog extends St.Widget {
 		this._dialog.ease({
 			opacity: 0,
 			...easeArgs,
-			duration: ANIMATION_TIME,
+			duration: this.ext.settings.get_int('animation-time'),
 			mode,
 			onComplete: () => {
 				Main.popModal(this._grab);
@@ -649,8 +646,9 @@ export class ClipboardDialog extends St.Widget {
 			query.change === SearchChange.Same
 				? this._allEntries
 				: this._allEntries.filter((entry) => query.withChange(SearchChange.Different).matchesEntryData(entry));
-		this._pendingEntries = entries.slice(INITIAL_ITEM_BATCH_SIZE);
-		for (const entry of entries.slice(0, INITIAL_ITEM_BATCH_SIZE)) this.addEntry(entry, false);
+		const initialBatchSize = this.ext.settings.get_int('initial-item-batch-size');
+		this._pendingEntries = entries.slice(initialBatchSize);
+		for (const entry of entries.slice(0, initialBatchSize)) this.addEntry(entry, false);
 		this._scrollView.setPendingItemCount(this._pendingEntries.length);
 	}
 
@@ -663,7 +661,7 @@ export class ClipboardDialog extends St.Widget {
 		if (this._lazyLoadSourceId >= 0 || this._pendingEntries.length === 0) return;
 
 		this._lazyLoadSourceId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
-			const batch = this._pendingEntries.splice(0, LAZY_ITEM_BATCH_SIZE);
+			const batch = this._pendingEntries.splice(0, this.ext.settings.get_int('lazy-item-batch-size'));
 			for (const entry of batch) this.addEntry(entry, false);
 			this._scrollView.setPendingItemCount(this._pendingEntries.length);
 

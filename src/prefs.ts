@@ -24,6 +24,7 @@ import { AppExclusionSettings } from './lib/preferences/general/appExclusionSett
 import { BehaviorSettings } from './lib/preferences/general/behaviorSettings.js';
 import { FeedbackSettings } from './lib/preferences/general/feedbackSettings.js';
 import { HistorySettings } from './lib/preferences/general/historySettings.js';
+import { LazyCopyousSettings } from './lib/preferences/general/lazyCopyousSettings.js';
 import { LocationsGroup } from './lib/preferences/general/locationsGroup.js';
 import { VersionSettings } from './lib/preferences/general/versionSettings.js';
 import { DialogShortcuts } from './lib/preferences/shortcuts/dialogShortcuts.js';
@@ -79,6 +80,7 @@ export default class Preferences extends ExtensionPreferences {
 		window.add(general);
 
 		general.add(new HistorySettings(this, window));
+		general.add(new LazyCopyousSettings(this));
 		const feedback = new FeedbackSettings(this, window);
 		dependenciesButton.bind_property('gsound', feedback, 'gsound', GObject.BindingFlags.SYNC_CREATE);
 		general.add(feedback);

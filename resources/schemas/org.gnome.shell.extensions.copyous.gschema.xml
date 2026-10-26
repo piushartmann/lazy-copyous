@@ -137,6 +137,16 @@
 			<range min="0" max="1440" />
 			<summary>Number of minutes to keep unpinned and untagged items in the clipboard history. Set to 0 to disable the time limit</summary>
 		</key>
+		<key name="initial-item-batch-size" type="i">
+			<default>6</default>
+			<range min="1" max="100"/>
+			<summary>Number of clipboard items rendered immediately when opening</summary>
+		</key>
+		<key name="lazy-item-batch-size" type="i">
+			<default>16</default>
+			<range min="1" max="100"/>
+			<summary>Number of clipboard items rendered in each lazy-loading batch</summary>
+		</key>
 
 		<!-- Behavior -->
 		<key name="remember-search" type="b">
@@ -255,6 +265,11 @@
 			<default>500</default>
 			<range min="200" max="10000" />
 			<summary>Width or height of the clipboard dialog depending on the orientation</summary>
+		</key>
+		<key name="animation-time" type="i">
+			<default>40</default>
+			<range min="0" max="1000"/>
+			<summary>Duration of the clipboard dialog opening and closing animation in milliseconds</summary>
 		</key>
 
 		<key name="clipboard-margin-top" type="i">

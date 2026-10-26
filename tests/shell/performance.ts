@@ -39,6 +39,15 @@ async function waitForExtensionState(): Promise<CopyousExtension> {
 	throw new Error(`Timed out waiting for ${UUID}`);
 }
 
+function waitForPaint(): Promise<void> {
+	return new Promise((resolve) => {
+		const signalId = global.stage.connect('after-paint', () => {
+			global.stage.disconnect(signalId);
+			resolve();
+		});
+	});
+}
+
 export async function run() {
 	Scripting.defineScriptEvent('copyousOpenStart', 'Starting to open copyous');
 	Scripting.defineScriptEvent('copyousOpenDone', 'Copyous finished opening');
@@ -47,7 +56,7 @@ export async function run() {
 
 	Scripting.scriptEvent('copyousOpenStart');
 	extension.clipboardDialog?.open();
-	await Scripting.waitLeisure();
+	await waitForPaint();
 
 	Scripting.scriptEvent('copyousOpenDone');
 
@@ -59,7 +68,7 @@ export async function run() {
 
 	Scripting.scriptEvent('copyousOpenStart');
 	extension.clipboardDialog?.open();
-	await Scripting.waitLeisure();
+	await waitForPaint();
 
 	Scripting.scriptEvent('copyousOpenDone');
 }
