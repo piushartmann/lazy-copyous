@@ -92,6 +92,16 @@ export class SearchQuery extends GObject.Object {
 		return entry.title ? this.matchesQuery(entry.title) : false;
 	}
 
+	public matchesEntryData(entry: ClipboardEntry): boolean {
+		return this.matchesEntry(
+			true,
+			entry,
+			entry.content,
+			entry.title,
+			entry.metadata ? JSON.stringify(entry.metadata) : '',
+		);
+	}
+
 	public withChange(change: SearchChange): SearchQuery {
 		return new SearchQuery(
 			change,

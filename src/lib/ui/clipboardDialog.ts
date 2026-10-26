@@ -34,11 +34,11 @@ import { ImageItem } from './items/imageItem.js';
 import { LinkItem } from './items/linkItem.js';
 import { TextItem } from './items/textItem.js';
 import { CenterBox, CollapsibleHeaderLayout, FitConstraint } from './layout.js';
-import { SearchEntry, SearchQuery } from './searchEntry.js';
+import { SearchChange, SearchEntry, SearchQuery } from './searchEntry.js';
 
 const ANIMATION_TIME = 150;
 const INITIAL_ITEM_BATCH_SIZE = 12;
-const LAZY_ITEM_BATCH_SIZE = 4;
+const LAZY_ITEM_BATCH_SIZE = 16;
 
 @registerClass()
 class IncognitoButton extends St.Button {
@@ -264,6 +264,7 @@ export class ClipboardDialog extends St.Widget {
 	private _nextCursor: [number, number] | null = null;
 	private _cursor: [number, number] | null = null;
 	private _pendingEntries: ClipboardEntry[] = [];
+	private _allEntries: ClipboardEntry[] = [];
 	private _lazyLoadSourceId = -1;
 
 	private _orientation: Clutter.Orientation = Clutter.Orientation.HORIZONTAL;
@@ -318,7 +319,7 @@ export class ClipboardDialog extends St.Widget {
 
 		this._header.connect('open-settings', this.openSettings.bind(this));
 		this._header.connect('clear-history', this.confirmClearHistory.bind(this));
-		this._header.searchEntry.connect('search', (_, query: SearchQuery) => this._scrollView.search(query));
+		this._header.searchEntry.connect('search', (_, query: SearchQuery) => this.search(query));
 		this._header.searchEntry.connect('activate', () => this._scrollView.activateFirst());
 
 		this._header.connect('notify::header-visible', () => {
@@ -401,7 +402,7 @@ export class ClipboardDialog extends St.Widget {
 		this.updateMargins();
 
 		// Update initial search for when exclude-pinned or exclude-tagged is enabled
-		this._scrollView.search(this._header.searchEntry.searchQuery);
+		this.search(this._header.searchEntry.searchQuery);
 	}
 
 	override destroy() {
@@ -495,6 +496,9 @@ export class ClipboardDialog extends St.Widget {
 		if (!this.opened) return;
 
 		this.stopLazyLoad();
+		const unloaded = this._scrollView.unloadItemsAfter(INITIAL_ITEM_BATCH_SIZE);
+		this._pendingEntries = [...unloaded.map((item) => item.entry), ...this._pendingEntries];
+		this._scrollView.setPendingItemCount(this._pendingEntries.length);
 		this._closing = true;
 		this.opened = false;
 		this._updateCursor = true;
@@ -543,7 +547,10 @@ export class ClipboardDialog extends St.Widget {
 		});
 	}
 
-	public addEntry(entry: ClipboardEntry): void {
+	public addEntry(entry: ClipboardEntry, trackEntry: boolean = true): void {
+		if (trackEntry && !this._allEntries.some((existing) => existing.id === entry.id)) {
+			this._allEntries.unshift(entry);
+		}
 		let item;
 		try {
 			item = (() => {
@@ -635,13 +642,21 @@ export class ClipboardDialog extends St.Widget {
 		this._scrollView.addItem(item);
 	}
 
-	public addEntries(entries: ClipboardEntry[]): void {
+	private search(query: SearchQuery): void {
 		this.cancelPendingEntries();
+		this._scrollView.clearItems();
+		const entries =
+			query.change === SearchChange.Same
+				? this._allEntries
+				: this._allEntries.filter((entry) => query.withChange(SearchChange.Different).matchesEntryData(entry));
 		this._pendingEntries = entries.slice(INITIAL_ITEM_BATCH_SIZE);
+		for (const entry of entries.slice(0, INITIAL_ITEM_BATCH_SIZE)) this.addEntry(entry, false);
+		this._scrollView.setPendingItemCount(this._pendingEntries.length);
+	}
 
-		for (const entry of entries.slice(0, INITIAL_ITEM_BATCH_SIZE)) {
-			this.addEntry(entry);
-		}
+	public addEntries(entries: ClipboardEntry[]): void {
+		this._allEntries = entries;
+		this.search(this._header.searchEntry.searchQuery);
 	}
 
 	private scheduleLazyLoad() {
@@ -649,7 +664,8 @@ export class ClipboardDialog extends St.Widget {
 
 		this._lazyLoadSourceId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
 			const batch = this._pendingEntries.splice(0, LAZY_ITEM_BATCH_SIZE);
-			for (const entry of batch) this.addEntry(entry);
+			for (const entry of batch) this.addEntry(entry, false);
+			this._scrollView.setPendingItemCount(this._pendingEntries.length);
 
 			this._lazyLoadSourceId = -1;
 			return GLib.SOURCE_REMOVE;

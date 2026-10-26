@@ -4,6 +4,7 @@ import St from 'gi://St';
 
 import type CopyousExtension from '../../extension.js';
 import { enumParamSpec, registerClass } from '../common/gjs.js';
+import type { ClipboardEntry } from '../database/database.js';
 import { get_first_visible_child, get_last_visible_child } from '../misc/actor.js';
 import { ClipboardScrollContainer } from './clipboardScrollContainer.js';
 import { ClipboardItem } from './items/clipboardItem.js';
@@ -50,7 +51,9 @@ export class ClipboardScrollView extends St.ScrollView {
 		this.connect('notify::width', this.scrollbarWorkaround.bind(this));
 		this._scrollContainer.connect('notify::width', this.scrollbarWorkaround.bind(this));
 		this.hadjustment.connect('notify::value', () => this.loadMoreIfNeeded());
+		this.hadjustment.connect('notify::upper', () => this.loadMoreIfNeeded());
 		this.vadjustment.connect('notify::value', () => this.loadMoreIfNeeded());
+		this.vadjustment.connect('notify::upper', () => this.loadMoreIfNeeded());
 
 		// Connect properties
 		this.ext.settings.connectObject(
@@ -83,6 +86,18 @@ export class ClipboardScrollView extends St.ScrollView {
 
 	public addItem(item: ClipboardItem) {
 		this._scrollContainer.addItem(item);
+	}
+
+	public setPendingItemCount(count: number) {
+		this._scrollContainer.setPendingItemCount(count);
+	}
+
+	public unloadItemsAfter(count: number): ClipboardItem[] {
+		return this._scrollContainer.unloadItemsAfter(count);
+	}
+
+	public unloadInvisibleItems(): ClipboardEntry[] {
+		return this._scrollContainer.unloadInvisibleItems();
 	}
 
 	public setLoadMoreCallback(callback: (() => void) | null) {
@@ -131,7 +146,9 @@ export class ClipboardScrollView extends St.ScrollView {
 
 	private loadMoreIfNeeded() {
 		const adjustment = this.orientation === Clutter.Orientation.HORIZONTAL ? this.hadjustment : this.vadjustment;
-		if (adjustment.upper - adjustment.page_size - adjustment.value < this._itemWidth + this._itemHeight) {
+		const preloadDistance =
+			this.orientation === Clutter.Orientation.HORIZONTAL ? this._itemWidth : this._itemHeight;
+		if (this._scrollContainer.isNearPendingItems(adjustment.value, adjustment.page_size, preloadDistance * 4)) {
 			this._loadMore?.();
 		}
 	}
@@ -170,60 +187,6 @@ export class ClipboardScrollView extends St.ScrollView {
 		}
 
 		return super.vfunc_key_press_event(event);
-	}
-
-	override vfunc_scroll_event(event: Clutter.Event): boolean {
-		let delta = 0;
-		let animate = false;
-
-		const scrollSource = event.get_scroll_source();
-		const direction = event.get_scroll_direction();
-		if (scrollSource === Clutter.ScrollSource.WHEEL || scrollSource === Clutter.ScrollSource.UNKNOWN) {
-			if (direction === Clutter.ScrollDirection.UP || direction === Clutter.ScrollDirection.LEFT) {
-				delta = -1;
-			} else if (direction === Clutter.ScrollDirection.DOWN || direction === Clutter.ScrollDirection.RIGHT) {
-				delta = 1;
-			}
-			animate = true;
-		} else if (direction === Clutter.ScrollDirection.SMOOTH) {
-			delta = event.get_scroll_delta()[this.orientation]!;
-		}
-
-		if (delta === 0) return Clutter.EVENT_STOP;
-
-		const spacing = (this._scrollContainer.get_layout_manager() as Clutter.BoxLayout).spacing;
-
-		let adjustment: St.Adjustment;
-		let step: number;
-		if (this._orientation === Clutter.Orientation.HORIZONTAL) {
-			adjustment = this.hadjustment;
-			step = this._itemWidth + spacing;
-		} else {
-			adjustment = this.vadjustment;
-			step = this._itemHeight + spacing;
-		}
-
-		// Extend previous animation or current value
-		const transition = adjustment.get_transition('value');
-		let start = (transition?.interval.final as number | undefined) ?? adjustment.value;
-		if ((start < adjustment.value && delta > 0) || (start > adjustment.value && delta < 0)) {
-			start = adjustment.value;
-		}
-
-		const value = Math.clamp(start + delta * step, adjustment.lower, adjustment.upper);
-
-		if (value === adjustment.value) return Clutter.EVENT_STOP;
-
-		if (animate) {
-			adjustment.ease(value, {
-				duration: 150,
-				mode: Clutter.AnimationMode.EASE_OUT_QUAD,
-			});
-		} else {
-			adjustment.value = value;
-		}
-
-		return Clutter.EVENT_STOP;
 	}
 
 	override destroy() {
