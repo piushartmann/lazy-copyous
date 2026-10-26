@@ -25,6 +25,7 @@ export class ClipboardScrollView extends St.ScrollView {
 	private _itemHeight: number = 0;
 
 	private readonly _scrollContainer: ClipboardScrollContainer;
+	private _loadMore: (() => void) | null = null;
 
 	constructor(private ext: CopyousExtension) {
 		super({
@@ -48,6 +49,8 @@ export class ClipboardScrollView extends St.ScrollView {
 
 		this.connect('notify::width', this.scrollbarWorkaround.bind(this));
 		this._scrollContainer.connect('notify::width', this.scrollbarWorkaround.bind(this));
+		this.hadjustment.connect('notify::value', () => this.loadMoreIfNeeded());
+		this.vadjustment.connect('notify::value', () => this.loadMoreIfNeeded());
 
 		// Connect properties
 		this.ext.settings.connectObject(
@@ -80,6 +83,10 @@ export class ClipboardScrollView extends St.ScrollView {
 
 	public addItem(item: ClipboardItem) {
 		this._scrollContainer.addItem(item);
+	}
+
+	public setLoadMoreCallback(callback: (() => void) | null) {
+		this._loadMore = callback;
 	}
 
 	public clearItems() {
@@ -119,6 +126,13 @@ export class ClipboardScrollView extends St.ScrollView {
 		} else {
 			this.vscrollbarPolicy = St.PolicyType.AUTOMATIC;
 			this.hscrollbarPolicy = St.PolicyType.NEVER;
+		}
+	}
+
+	private loadMoreIfNeeded() {
+		const adjustment = this.orientation === Clutter.Orientation.HORIZONTAL ? this.hadjustment : this.vadjustment;
+		if (adjustment.upper - adjustment.page_size - adjustment.value < this._itemWidth + this._itemHeight) {
+			this._loadMore?.();
 		}
 	}
 

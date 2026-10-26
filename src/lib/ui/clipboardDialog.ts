@@ -331,6 +331,7 @@ export class ClipboardDialog extends St.Widget {
 
 		// Scrollbox
 		this._scrollView = new ClipboardScrollView(ext);
+		this._scrollView.setLoadMoreCallback(() => this.scheduleLazyLoad());
 		this._dialog.add_child(this._scrollView);
 
 		this._widthConstraint = new Clutter.BindConstraint({
@@ -650,12 +651,8 @@ export class ClipboardDialog extends St.Widget {
 			const batch = this._pendingEntries.splice(0, LAZY_ITEM_BATCH_SIZE);
 			for (const entry of batch) this.addEntry(entry);
 
-			if (this._pendingEntries.length === 0) {
-				this._lazyLoadSourceId = -1;
-				return GLib.SOURCE_REMOVE;
-			}
-
-			return GLib.SOURCE_CONTINUE;
+			this._lazyLoadSourceId = -1;
+			return GLib.SOURCE_REMOVE;
 		});
 	}
 
