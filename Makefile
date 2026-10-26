@@ -140,12 +140,18 @@ TSC := $(DIST_DIR)/extension.js
 
 # CSS
 # Rule for css/stylesheet-{theme}-{type}.css
+GNOME_SHELL_SASS := submodules/gnome-shell/data/theme/gnome-shell-sass
+
+define theme_sass_path
+$(if $(filter default,$(1)),$(GNOME_SHELL_SASS),resources/css/themes/$(1)/gnome-shell-sass)
+endef
+
 define theme_rule
 $$(DIST_DIR)/css/stylesheet-$(1)-$(2).css: \
-		resources/css/themes/$(1)/$(2).scss resources/css/themes/$(1)/gnome-shell-sass/_*.scss \
+		resources/css/themes/$(1)/$(2).scss $(call theme_sass_path,$(1))/_*.scss \
 		resources/css/themes/default/_*.scss resources/css/themes/default/widgets/_*.scss | $$(DIST_DIR)
 	@mkdir -p $$(DIST_DIR)/css
-	pnpm exec sass --no-source-map --load-path=resources/css/themes/default --load-path=resources/css/themes/$(1)/gnome-shell-sass --quiet-deps $$<:$$@
+	pnpm exec sass --no-source-map --load-path=resources/css/themes/default --load-path=$(call theme_sass_path,$(1)) --quiet-deps $$<:$$@
 	sed -i -re ':a; s%(.*)/\*.*\*/%\1%; ta; /\/\*/ !b; N; ba' $$@ # Remove multiline comments
 	sed -i -e '/stage {/,/}/d' -e '/^$$$$/d' $$@
 endef

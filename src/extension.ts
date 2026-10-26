@@ -80,7 +80,10 @@ export default class CopyousExtension extends Extension {
 				this.indicator?.showEntry(entry);
 			},
 			'clear-history',
-			(_: unknown, history: ClipboardHistory) => this.entryTracker?.clear(history),
+			(_: unknown, history: ClipboardHistory) => {
+				this.clipboardDialog?.cancelPendingEntries();
+				void this.entryTracker?.clear(history);
+			},
 			this,
 		);
 
@@ -89,7 +92,10 @@ export default class CopyousExtension extends Extension {
 			'open-dialog',
 			() => this.clipboardDialog?.open(),
 			'clear-history',
-			(_: unknown, history: ClipboardHistory) => this.entryTracker?.clear(history),
+			(_: unknown, history: ClipboardHistory) => {
+				this.clipboardDialog?.cancelPendingEntries();
+				void this.entryTracker?.clear(history);
+			},
 			this,
 		);
 
@@ -103,7 +109,10 @@ export default class CopyousExtension extends Extension {
 			'hide',
 			() => this.clipboardDialog?.close(),
 			'clear-history',
-			(_: unknown, history: ClipboardHistory | -1) => this.entryTracker?.clear(history === -1 ? null : history),
+			(_: unknown, history: ClipboardHistory | -1) => {
+				this.clipboardDialog?.cancelPendingEntries();
+				void this.entryTracker?.clear(history === -1 ? null : history);
+			},
 			this,
 		);
 
@@ -264,9 +273,7 @@ export default class CopyousExtension extends Extension {
 
 		this.clipboardDialog?.clearEntries();
 		const entries = await this.entryTracker.init();
-		for (const entry of entries) {
-			this.clipboardDialog?.addEntry(entry);
-		}
+		this.clipboardDialog?.addEntries(entries);
 	}
 
 	private async initHistoryTimeout() {

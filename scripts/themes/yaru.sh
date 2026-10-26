@@ -5,14 +5,14 @@ base_url="https://raw.githubusercontent.com/ubuntu/yaru/${branch}"
 out_dir="resources/css/themes/yaru/gnome-shell-sass"
 
 files=(
-	"gnome-shell/src/gnome-shell-sass/_colors.scss"
-	"gnome-shell/src/gnome-shell-sass/_common.scss"
-	"gnome-shell/src/gnome-shell-sass/_default-colors.scss"
-	"gnome-shell/src/gnome-shell-sass/_drawing.scss"
-	"gnome-shell/src/gnome-shell-sass/_high-contrast-colors.scss"
-	"gnome-shell/src/gnome-shell-sass/_palette.scss"
-	"gnome-shell/src/gnome-shell-sass/_yaru-colors.scss"
-	"gnome-shell/src/gnome-shell-sass/_yaru-default-colors.scss"
+	"gnome-shell/data/theme/gnome-shell-sass/_colors.scss"
+	"gnome-shell/data/theme/gnome-shell-sass/_common.scss"
+	"gnome-shell/data/theme/gnome-shell-sass/_default-colors.scss"
+	"gnome-shell/data/theme/gnome-shell-sass/_drawing.scss"
+	"gnome-shell/data/theme/gnome-shell-sass/_high-contrast-colors.scss"
+	"gnome-shell/data/theme/gnome-shell-sass/_palette.scss"
+	"gnome-shell/data/theme/gnome-shell-sass/_yaru-colors.scss"
+	"gnome-shell/data/theme/gnome-shell-sass/_yaru-default-colors.scss"
 	"common/sass-utils.scss"
 )
 

@@ -1,4 +1,5 @@
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
 import Graphene from 'gi://Graphene';
@@ -36,6 +37,8 @@ import { CenterBox, CollapsibleHeaderLayout, FitConstraint } from './layout.js';
 import { SearchEntry, SearchQuery } from './searchEntry.js';
 
 const ANIMATION_TIME = 150;
+const INITIAL_ITEM_BATCH_SIZE = 12;
+const LAZY_ITEM_BATCH_SIZE = 4;
 
 @registerClass()
 class IncognitoButton extends St.Button {
@@ -260,6 +263,8 @@ export class ClipboardDialog extends St.Widget {
 	private _updateCursor: boolean = true;
 	private _nextCursor: [number, number] | null = null;
 	private _cursor: [number, number] | null = null;
+	private _pendingEntries: ClipboardEntry[] = [];
+	private _lazyLoadSourceId = -1;
 
 	private _orientation: Clutter.Orientation = Clutter.Orientation.HORIZONTAL;
 
@@ -399,6 +404,7 @@ export class ClipboardDialog extends St.Widget {
 	}
 
 	override destroy() {
+		this.cancelPendingEntries();
 		(Main.inputMethod as Clutter.InputMethod).disconnectObject(this);
 		this._ibusManager.disconnectObject(this);
 		this.ext.settings.disconnectObject(this);
@@ -471,7 +477,6 @@ export class ClipboardDialog extends St.Widget {
 		}
 
 		this.opened = true;
-		global.compositor.disable_unredirect();
 
 		this._dialog.ease({
 			opacity: 255,
@@ -481,12 +486,14 @@ export class ClipboardDialog extends St.Widget {
 			scaleY: 1,
 			duration: ANIMATION_TIME,
 			mode,
+			onComplete: () => this.scheduleLazyLoad(),
 		});
 	}
 
 	public close() {
 		if (!this.opened) return;
 
+		this.stopLazyLoad();
 		this._closing = true;
 		this.opened = false;
 		this._updateCursor = true;
@@ -531,7 +538,6 @@ export class ClipboardDialog extends St.Widget {
 				this._grab = null;
 				this._closing = false;
 				this.hide();
-				global.compositor.enable_unredirect();
 			},
 		});
 	}
@@ -628,6 +634,31 @@ export class ClipboardDialog extends St.Widget {
 		this._scrollView.addItem(item);
 	}
 
+	public addEntries(entries: ClipboardEntry[]): void {
+		this.cancelPendingEntries();
+		this._pendingEntries = entries.slice(INITIAL_ITEM_BATCH_SIZE);
+
+		for (const entry of entries.slice(0, INITIAL_ITEM_BATCH_SIZE)) {
+			this.addEntry(entry);
+		}
+	}
+
+	private scheduleLazyLoad() {
+		if (this._lazyLoadSourceId >= 0 || this._pendingEntries.length === 0) return;
+
+		this._lazyLoadSourceId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+			const batch = this._pendingEntries.splice(0, LAZY_ITEM_BATCH_SIZE);
+			for (const entry of batch) this.addEntry(entry);
+
+			if (this._pendingEntries.length === 0) {
+				this._lazyLoadSourceId = -1;
+				return GLib.SOURCE_REMOVE;
+			}
+
+			return GLib.SOURCE_CONTINUE;
+		});
+	}
+
 	public dialogShortcut() {
 		const behavior = this.ext.settings.get_enum('open-clipboard-dialog-behavior');
 		if (behavior === OpenClipboardDialogBehavior.Toggle) {
@@ -639,7 +670,20 @@ export class ClipboardDialog extends St.Widget {
 	}
 
 	public clearEntries() {
+		this.cancelPendingEntries();
 		this._scrollView.clearItems();
+	}
+
+	public cancelPendingEntries() {
+		this.stopLazyLoad();
+		this._pendingEntries = [];
+	}
+
+	private stopLazyLoad() {
+		if (this._lazyLoadSourceId >= 0) {
+			GLib.source_remove(this._lazyLoadSourceId);
+			this._lazyLoadSourceId = -1;
+		}
 	}
 
 	private openSettings() {
